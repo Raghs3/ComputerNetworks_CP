@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.env
+.venv/
+venv/
+env/
+
+# Data files (optional - remove if you want to track CSVs)
+# *.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+network_data_amazon_com.csv	
+network_data_google_com.csv	
+network_data_poki_com.csv	
+test_network_data.csv
+UPDATE_SUMMARY.md	
+TECHNICAL_DOCS.md

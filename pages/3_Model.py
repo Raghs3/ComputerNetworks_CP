@@ -10,6 +10,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from network_quality_ml import DEFAULT_MODEL_PATH, load_model_bundle
 from train_network_quality_model import train_once
+from utils import force_single_threaded_model
 
 st.set_page_config(page_title="Model", layout="wide", page_icon="🤖")
 st.title("🤖 Model — Performance & Parameters")
@@ -24,7 +25,7 @@ def load_model():
 
 
 bundle = load_model()
-model = bundle["model"]
+model = force_single_threaded_model(bundle["model"])
 
 # --- model info + R² + retrain ---
 c1, c2, c3 = st.columns([3, 1, 1])
@@ -60,7 +61,7 @@ with c3:
     new_csvs = [f for f in DATA_DIR.glob("network_data_*.csv") if f.stat().st_mtime > model_mtime]
     if new_csvs:
         st.info(f"{len(new_csvs)} new CSV(s) detected")
-    if st.button("🔄 Retrain Now", use_container_width=True):
+    if st.button("🔄 Retrain Now", width="stretch"):
         with st.spinner("Retraining... this may take a minute."):
             try:
                 train_once(
@@ -70,6 +71,7 @@ with c3:
                     horizon=int(bundle.get("horizon", 15)),
                     test_ratio=0.2,
                     n_estimators=300,
+                    n_jobs=1,
                 )
                 st.cache_resource.clear()
                 st.success("Model retrained successfully!")
@@ -115,9 +117,14 @@ st.divider()
 
 # --- feature importance ---
 st.subheader("Top Features by Importance")
-if hasattr(model, "feature_importances_"):
-    importances = model.feature_importances_
-    feature_names = bundle.get("feature_names", [f"f{i}" for i in range(len(importances))])
+try:
+    importances = getattr(model, "feature_importances_")
+except Exception as error:
+    st.warning(f"Feature importances are unavailable for this model in the current environment: {error}")
+else:
+    feature_names = list(bundle.get("feature_names", []))
+    if len(feature_names) < len(importances):
+        feature_names.extend(f"f{i}" for i in range(len(feature_names), len(importances)))
     idx = np.argsort(importances)[::-1][:8]
     top_names = [feature_names[i] for i in idx]
     top_vals = [float(importances[i]) for i in idx]
@@ -138,6 +145,4 @@ if hasattr(model, "feature_importances_"):
         xaxis=dict(title="Importance", gridcolor="#2a2a3a"),
         yaxis=dict(autorange="reversed"),
     )
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.info("Feature importances not available for this model type.")
+    st.plotly_chart(fig, width="stretch")

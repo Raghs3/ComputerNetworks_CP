@@ -82,3 +82,19 @@ def csv_path_for_site(site: str) -> Path:
     target = target.rstrip("/")
     safe = target.replace(".", "_").replace("/", "_").replace(":", "_")
     return DATA_DIR / f"network_data_{safe}.csv"
+
+
+def force_single_threaded_model(model):
+    """Avoid Windows permission failures from sklearn/joblib worker pools in Streamlit."""
+    if hasattr(model, "set_params"):
+        try:
+            model.set_params(n_jobs=1)
+            return model
+        except (TypeError, ValueError):
+            pass
+    if hasattr(model, "n_jobs"):
+        try:
+            model.n_jobs = 1
+        except Exception:
+            pass
+    return model

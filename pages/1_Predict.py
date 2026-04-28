@@ -15,7 +15,7 @@ from network_quality_ml import (
     make_prediction_features,
     quality_band,
 )
-from utils import band_color, csv_path_for_site
+from utils import band_color, csv_path_for_site, force_single_threaded_model
 
 st.set_page_config(page_title="Predict", layout="wide", page_icon="📡")
 st.title("📡 Predict — Real-Time Network Quality")
@@ -27,6 +27,7 @@ def load_model():
 
 
 model_bundle = load_model()
+model = force_single_threaded_model(model_bundle["model"])
 
 if "monitor_proc" not in st.session_state:
     st.session_state.monitor_proc = None
@@ -43,10 +44,10 @@ with col_input:
                          placeholder="e.g. netflix.com")
 with col_start:
     st.write("")
-    start_clicked = st.button("▶ Start", use_container_width=True, type="primary")
+    start_clicked = st.button("▶ Start", width="stretch", type="primary")
 with col_stop:
     st.write("")
-    stop_clicked = st.button("■ Stop", use_container_width=True)
+    stop_clicked = st.button("■ Stop", width="stretch")
 
 if start_clicked and site:
     if st.session_state.monitor_proc is not None:
@@ -123,7 +124,7 @@ def make_chart(y_series, title, color, y_label):
         xaxis=dict(title="Time (last 30 s)", gridcolor="#2a2a3a", showgrid=True),
         yaxis=dict(title=y_label, gridcolor="#2a2a3a", showgrid=True),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     st.caption(f"Min: {y_series.min():.1f} · Max: {y_series.max():.1f} · Avg: {y_series.mean():.1f} {y_label}")
 
 
@@ -141,7 +142,7 @@ if features.size == 0:
     st.warning("Not enough data for prediction yet.")
     st.stop()
 
-predicted = model_bundle["model"].predict(features.reshape(1, -1))[0]
+predicted = model.predict(features.reshape(1, -1))[0]
 pred_rtt = float(predicted[0])
 pred_jitter = float(predicted[1])
 pred_loss = float(predicted[2])

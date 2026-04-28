@@ -48,14 +48,14 @@ def evaluate_predictions(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, fl
     return metrics
 
 
-def build_candidates(n_estimators: int) -> list[tuple[str, object]]:
+def build_candidates(n_estimators: int, n_jobs: int) -> list[tuple[str, object]]:
     return [
         (
             "RandomForestRegressor",
             RandomForestRegressor(
                 n_estimators=n_estimators,
                 random_state=42,
-                n_jobs=-1,
+                n_jobs=n_jobs,
                 min_samples_leaf=2,
             ),
         ),
@@ -64,14 +64,22 @@ def build_candidates(n_estimators: int) -> list[tuple[str, object]]:
             ExtraTreesRegressor(
                 n_estimators=n_estimators,
                 random_state=42,
-                n_jobs=-1,
+                n_jobs=n_jobs,
                 min_samples_leaf=1,
             ),
         ),
     ]
 
 
-def train_once(data_dir: Path, model_path: Path, lookback: int, horizon: int, test_ratio: float, n_estimators: int) -> dict[str, float]:
+def train_once(
+    data_dir: Path,
+    model_path: Path,
+    lookback: int,
+    horizon: int,
+    test_ratio: float,
+    n_estimators: int,
+    n_jobs: int = -1,
+) -> dict[str, float]:
     dataset, used_files, site_feature_names = load_training_data(data_dir=data_dir, lookback=lookback, horizon=horizon)
     if dataset.features.size == 0:
         raise RuntimeError(
@@ -97,7 +105,7 @@ def train_once(data_dir: Path, model_path: Path, lookback: int, horizon: int, te
     best_metrics: dict[str, float] | None = None
     best_name = ""
 
-    for candidate_name, candidate_model in build_candidates(n_estimators):
+    for candidate_name, candidate_model in build_candidates(n_estimators, n_jobs):
         candidate_model.fit(X_train, y_train)
         y_pred = candidate_model.predict(X_test)
         candidate_metrics = evaluate_predictions(y_test, y_pred)
@@ -116,7 +124,7 @@ def train_once(data_dir: Path, model_path: Path, lookback: int, horizon: int, te
         "lookback": lookback,
         "horizon": horizon,
         "row_feature_columns": ROW_FEATURE_COLUMNS,
-        "feature_names": build_feature_names(lookback),
+        "feature_names": build_feature_names(lookback, site_feature_names),
         "target_columns": [*TARGET_COLUMNS, "Future Quality Score"],
         "metrics": best_metrics,
         "trained_at": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -147,6 +155,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--horizon", type=int, default=15, help="Seconds ahead to predict")
     parser.add_argument("--test-ratio", type=float, default=0.2, help="Fraction of samples reserved for testing")
     parser.add_argument("--n-estimators", type=int, default=300, help="Number of trees in the random forest")
+    parser.add_argument("--n-jobs", type=int, default=-1, help="Parallel jobs used by sklearn estimators")
     parser.add_argument("--watch", action="store_true", help="Keep retraining as new CSV data arrives")
     parser.add_argument("--once", action="store_true", help="Train a single time and exit")
     parser.add_argument("--interval", type=int, default=60, help="Seconds between retraining cycles while watching")
@@ -176,6 +185,7 @@ def main() -> None:
                     horizon=args.horizon,
                     test_ratio=args.test_ratio,
                     n_estimators=args.n_estimators,
+                    n_jobs=args.n_jobs,
                 )
                 last_data_state = current_data_state
             except Exception as error:
@@ -189,6 +199,7 @@ def main() -> None:
             horizon=args.horizon,
             test_ratio=args.test_ratio,
             n_estimators=args.n_estimators,
+            n_jobs=args.n_jobs,
         )
 
 

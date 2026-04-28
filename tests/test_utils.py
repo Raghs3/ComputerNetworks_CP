@@ -70,6 +70,8 @@ def test_load_site_summary(tmp_path):
     assert summary["display_name"] == "test.com"
     assert abs(summary["avg_rtt"] - 104.0) < 0.1
     assert summary["avg_loss"] == 0.0
+    assert abs(summary["avg_jitter"] - 11.0) < 0.1
+    assert abs(summary["avg_throughput"] - 2.44) < 0.02
     assert summary["sample_count"] == 5
     assert "quality_score" in summary
     assert "band" in summary

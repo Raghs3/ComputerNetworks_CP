@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from utils import band_color, quality_band_from_score, load_site_summary, format_site_name
+from utils import band_color, quality_band_from_score, load_site_summary, format_site_name, csv_path_for_site
 
 
 def test_band_color_excellent():
@@ -74,3 +74,10 @@ def test_load_site_summary(tmp_path):
     assert "quality_score" in summary
     assert "band" in summary
     assert "color" in summary
+
+
+def test_csv_path_for_site():
+    assert csv_path_for_site("https://google.com").name == "network_data_google_com.csv"
+    assert csv_path_for_site("http://google.com").name == "network_data_google_com.csv"
+    assert csv_path_for_site("google.com").name == "network_data_google_com.csv"
+    assert csv_path_for_site("github.com/").name == "network_data_github_com.csv"

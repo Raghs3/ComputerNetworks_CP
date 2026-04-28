@@ -11,7 +11,6 @@ from streamlit_autorefresh import st_autorefresh
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from network_quality_ml import (
     DEFAULT_MODEL_PATH,
-    compute_quality_score,
     load_model_bundle,
     make_prediction_features,
     quality_band,
@@ -121,7 +120,7 @@ def make_chart(y_series, title, color, y_label):
     fig.update_layout(
         title=title, height=220, margin=dict(l=40, r=20, t=40, b=40),
         paper_bgcolor="#0e1117", plot_bgcolor="#0e1117", font=dict(color="#ccc"),
-        xaxis=dict(title="Time", gridcolor="#2a2a3a", showgrid=True),
+        xaxis=dict(title="Time (last 30 s)", gridcolor="#2a2a3a", showgrid=True),
         yaxis=dict(title=y_label, gridcolor="#2a2a3a", showgrid=True),
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -171,7 +170,7 @@ with pc1:
 with pc2:
     st.markdown(
         f"""
-        | Metric | Predicted |
+        | Metric | Next {horizon} s |
         |--------|-----------|
         | RTT | {pred_rtt:.1f} ms |
         | Jitter | {pred_jitter:.1f} ms |

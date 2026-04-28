@@ -7,7 +7,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from network_quality_ml import compute_quality_score
-from utils import band_color, load_all_sites
+from utils import load_all_sites
 
 st.set_page_config(page_title="History", layout="wide", page_icon="📊")
 st.title("📊 History — Website Network Trends")

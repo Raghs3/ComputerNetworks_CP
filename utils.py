@@ -33,6 +33,8 @@ def load_site_summary(csv_path: Path) -> dict:
     site_key = stem.removeprefix("network_data_") if stem.startswith("network_data_") else stem
 
     df = pd.read_csv(csv_path)
+    if df.empty:
+        raise ValueError(f"CSV has no rows: {csv_path}")
     for col in ["RTT (ms)", "Jitter (ms)", "Packet Loss (%)", "Throughput (Kbps)"]:
         if col not in df.columns:
             df[col] = 0.0

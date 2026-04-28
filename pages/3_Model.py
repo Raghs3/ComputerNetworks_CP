@@ -123,9 +123,8 @@ except Exception as error:
     st.warning(f"Feature importances are unavailable for this model in the current environment: {error}")
 else:
     feature_names = list(bundle.get("feature_names", []))
-    if len(feature_names) < len(importances):
-        feature_names.extend(f"f{i}" for i in range(len(feature_names), len(importances)))
-    idx = np.argsort(importances)[::-1][:8]
+    named_count = min(len(feature_names), len(importances))
+    idx = np.argsort(importances[:named_count])[::-1][:8]
     top_names = [feature_names[i] for i in idx]
     top_vals = [float(importances[i]) for i in idx]
 

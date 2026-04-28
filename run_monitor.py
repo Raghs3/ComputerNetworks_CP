@@ -11,6 +11,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     target = sys.argv[1]
+    if target.startswith("http://"):
+        target = target[7:]
+    elif target.startswith("https://"):
+        target = target[8:]
+    target = target.rstrip("/")
     csv_path = sys.argv[2]
     monitor = NetworkMonitor(target=target, csv_filename=csv_path)
     monitor.run()

@@ -11,10 +11,10 @@ if __name__ == "__main__":
     monitor = NetworkMonitor(
         target="8.8.8.8",
         window_size=10,  # Smaller window for quick test
-        csv_filename="test_network_data.csv"
+        csv_filename="data/test_network_data.csv"
     )
     
     # Run for 30 seconds
     monitor.run(duration=30)
     
-    print("\n✅ Test completed! Check 'test_network_data.csv' for results.")
+    print("\n Test completed! Check 'data/test_network_data.csv' for results.")

@@ -25,7 +25,7 @@
    - Uses min-max normalization
 
 5. **CSV Data Storage**
-   - All metrics saved in real-time to `network_data.csv`
+   - All metrics saved in real-time under the `data/` folder
    - Includes timestamp, raw values, moving averages, and normalized features
 
 ---
@@ -42,6 +42,32 @@
 python network_monitor.py
 ```
 
+### Train and Predict with the ML Model
+
+Start the trainer once and leave it running. It will retrain automatically whenever the CSV files change:
+
+```bash
+python train_network_quality_model.py
+```
+
+If you only want one training pass, use:
+
+```bash
+python train_network_quality_model.py --once
+```
+
+The model is still a single shared model, but it now learns a website identifier feature from the CSV filename so Google, Bing, Amazon, and others can produce different forecasts.
+
+Predict the next 10-15 seconds in real time while a CSV is being updated:
+
+```bash
+python predict_network_quality_realtime.py --csv data/network_data_google_com.csv
+```
+
+`--auto-reload` reloads the saved model if the model file changes. It does not switch the CSV file, so pass the CSV for the website you want to forecast.
+
+The predictor needs a warm-up window first. Once it has about 20-30 seconds of recent rows, it can forecast the next 10-15 seconds for websites you have not pinged before, using the shared model trained on all available data.
+
 ### Input Required
 When you run the script, you'll be prompted to enter a website name:
 
@@ -53,7 +79,7 @@ When you run the script, you'll be prompted to enter a website name:
 📍 Enter website name or IP address (e.g., google.com): google.com
 
 ✓ Target set to: google.com
-✓ Data will be saved to: network_data_google_com.csv
+✓ Data will be saved to: data/network_data_google_com.csv
 
 ▶ Start monitoring? (y/n): y
 ```
@@ -72,7 +98,7 @@ When you run the script, you'll be prompted to enter a website name:
 The script will:
 1. Accept your website input
 2. Automatically sanitize the website name
-3. Create a unique CSV file named `network_data_<website>.csv` (e.g., `network_data_google_com.csv`)
+3. Create a unique CSV file named `data/network_data_<website>.csv` (e.g., `data/network_data_google_com.csv`)
 4. Start monitoring and display real-time metrics every second
 5. Save all data to the CSV file for later analysis
 
@@ -88,7 +114,7 @@ Press `Ctrl+C` to stop and see summary statistics
 Total Pings:        245
 Failed Pings:       2
 Success Rate:       99.18%
-Data saved to:      network_data_google_com.csv
+Data saved to:      data/network_data_google_com.csv
 ============================================================
 ```
 
@@ -99,7 +125,7 @@ Want to test without interactive input? Run the test script:
 python test_website_monitor.py
 ```
 
-This will monitor `google.com` for 10 seconds and save results to `test_google_com.csv`.
+This will monitor `google.com` for 10 seconds and save results to `data/test_google_com.csv`.
 
 ---
 
@@ -141,9 +167,9 @@ Additional columns include:
 - Normalized RTT, Normalized Jitter, Normalized Loss, Normalized Throughput
 
 **Each website gets its own CSV file:**
-- `network_data_google_com.csv`
-- `network_data_github_com.csv`
-- `network_data_youtube_com.csv`
+- `data/network_data_google_com.csv`
+- `data/network_data_github_com.csv`
+- `data/network_data_youtube_com.csv`
 - etc.
 
 ---

@@ -27,7 +27,15 @@ if not MODEL_PATH.exists():
     if st.button("🔄 Train Now"):
         with st.spinner("Training... this may take a minute."):
             try:
-                train_once(data_dir=DATA_DIR, model_path=MODEL_PATH, n_jobs=1)
+                train_once(
+                    data_dir=DATA_DIR,
+                    model_path=MODEL_PATH,
+                    lookback=30,
+                    horizon=15,
+                    test_ratio=0.2,
+                    n_estimators=300,
+                    n_jobs=1,
+                )
                 st.cache_resource.clear()
                 st.success("Model trained successfully!")
                 st.rerun()
@@ -77,7 +85,7 @@ with c3:
     new_csvs = [f for f in DATA_DIR.glob("network_data_*.csv") if f.stat().st_mtime > model_mtime]
     if new_csvs:
         st.info(f"{len(new_csvs)} new CSV(s) detected")
-    if st.button("🔄 Retrain Now", width="stretch"):
+    if st.button("🔄 Retrain Now", use_container_width=True):
         with st.spinner("Retraining... this may take a minute."):
             try:
                 train_once(
@@ -160,4 +168,4 @@ else:
         xaxis=dict(title="Importance", gridcolor="#2a2a3a"),
         yaxis=dict(autorange="reversed"),
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)

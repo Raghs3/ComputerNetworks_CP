@@ -44,10 +44,10 @@ with col_input:
                          placeholder="e.g. netflix.com")
 with col_start:
     st.write("")
-    start_clicked = st.button("▶ Start", width="stretch", type="primary")
+    start_clicked = st.button("▶ Start", use_container_width=True, type="primary")
 with col_stop:
     st.write("")
-    stop_clicked = st.button("■ Stop", width="stretch")
+    stop_clicked = st.button("■ Stop", use_container_width=True)
 
 if start_clicked and site:
     if st.session_state.monitor_proc is not None:
@@ -124,7 +124,7 @@ def make_chart(y_series, title, color, y_label):
         xaxis=dict(title="Time (last 30 s)", gridcolor="#2a2a3a", showgrid=True),
         yaxis=dict(title=y_label, gridcolor="#2a2a3a", showgrid=True),
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     st.caption(f"Min: {y_series.min():.1f} · Max: {y_series.max():.1f} · Avg: {y_series.mean():.1f} {y_label}")
 
 

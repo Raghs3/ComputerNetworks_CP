@@ -100,7 +100,7 @@ if selected_key:
                 xaxis=dict(title="Time", gridcolor="#2a2a3a"),
                 yaxis=dict(title=y_label, gridcolor="#2a2a3a"),
             )
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
             mn, mx, avg = df[y_col].min(), df[y_col].max(), df[y_col].mean()
             st.caption(f"Min: {mn:.1f} · Max: {mx:.1f} · Avg: {avg:.1f} {y_label}")
 

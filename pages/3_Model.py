@@ -1,9 +1,7 @@
-import os
 import sys
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -24,8 +22,25 @@ def load_model():
     return load_model_bundle(MODEL_PATH)
 
 
+if not MODEL_PATH.exists():
+    st.warning("No trained model found. Train one first using the button below.")
+    if st.button("🔄 Train Now"):
+        with st.spinner("Training... this may take a minute."):
+            try:
+                train_once(data_dir=DATA_DIR, model_path=MODEL_PATH, n_jobs=1)
+                st.cache_resource.clear()
+                st.success("Model trained successfully!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Training failed: {e}")
+    st.stop()
+
 bundle = load_model()
-model = force_single_threaded_model(bundle["model"])
+model = bundle.get("model")
+if model is None:
+    st.error("Model bundle is missing the 'model' key. Please retrain.")
+    st.stop()
+model = force_single_threaded_model(model)
 
 # --- model info + R² + retrain ---
 c1, c2, c3 = st.columns([3, 1, 1])
@@ -46,9 +61,10 @@ with c1:
 
 with c2:
     qs_r2 = bundle.get("metrics", {}).get("Future Quality Score R2", 0.0)
+    r2_color = "#4fc97f" if qs_r2 >= 0.85 else "#f7a54f" if qs_r2 >= 0.7 else "#e05c5c"
     st.subheader("Quality Score R²")
     st.markdown(
-        f"<div style='font-size:52px; font-weight:bold; color:#4fc97f;"
+        f"<div style='font-size:52px; font-weight:bold; color:{r2_color};"
         f"text-align:center;'>{qs_r2:.2f}</div>",
         unsafe_allow_html=True,
     )
@@ -57,7 +73,7 @@ with c2:
 
 with c3:
     st.subheader("Retrain")
-    model_mtime = os.path.getmtime(MODEL_PATH) if MODEL_PATH.exists() else 0
+    model_mtime = MODEL_PATH.stat().st_mtime if MODEL_PATH.exists() else 0
     new_csvs = [f for f in DATA_DIR.glob("network_data_*.csv") if f.stat().st_mtime > model_mtime]
     if new_csvs:
         st.info(f"{len(new_csvs)} new CSV(s) detected")

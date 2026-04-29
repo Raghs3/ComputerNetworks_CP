@@ -1,323 +1,141 @@
 # 🌐 Real-Time Network Quality Prediction System
 
-## Phase 1: Data Collection & Feature Extraction
-
-### ✅ Implemented Features
-
-1. **Ping Automation Script**
-   - Automatically pings target every second
-   - Captures Round-Trip Time (RTT)
-
-2. **Metric Calculation**
-   - **RTT (Round-Trip Time)**: Delay for packet to go and return
-   - **Jitter**: Variation between consecutive delays (network stability indicator)
-   - **Packet Loss**: Percentage of failed pings
-   - **Throughput**: Estimated data transfer rate based on RTT
-
-3. **Moving Averages**
-   - Calculates moving average for RTT, Jitter, and Loss
-   - Uses sliding window (default: last 20 samples)
-   - Smooths out spikes to show real trends
-
-4. **Feature Normalization**
-   - Converts all metrics to 0-1 scale
-   - Makes features comparable for future ML models
-   - Uses min-max normalization
-
-5. **CSV Data Storage**
-   - All metrics saved in real-time under the `data/` folder
-   - Includes timestamp, raw values, moving averages, and normalized features
+A 4-page Streamlit dashboard that monitors any website's network quality in real time, predicts future quality using a trained Random Forest model, and visualises historical trends and model performance.
 
 ---
 
-## 🚀 How to Run
-
-### Prerequisites
-- Python 3.x installed
-- Windows OS (script uses Windows ping command)
-
-### Run the Script
+## 🚀 Quick Start
 
 ```bash
-python network_monitor.py
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch the dashboard
+.venv\Scripts\streamlit run app.py
 ```
 
-### Train and Predict with the ML Model
+Open `http://localhost:8501` in your browser.
 
-Start the trainer once and leave it running. It will retrain automatically whenever the CSV files change:
+---
 
+## 📋 Dashboard Pages
+
+### 🏠 Dashboard (home)
+Overview of all monitored sites — stat tiles (total / good / bad / poor) and a colour-coded site card grid. Click **Predict Live** on any card to jump straight to monitoring.
+
+### 📡 Predict
+Live monitoring and real-time ML prediction for any website.
+1. Enter a URL and click **Start** — monitoring begins in a background process.
+2. A warm-up progress bar counts 0 → 30 samples.
+3. Once warmed up: 4 live charts (RTT, Jitter, Packet Loss, Throughput) update every second alongside a prediction card showing quality score, band, and forecast metrics for the next 15 seconds.
+4. Click **Stop** to terminate the monitoring process.
+
+### 📊 History
+Historical trends per site. Sort by Worst / Best / A–Z. Click **Details ›** on any row to expand 4 full Plotly charts (RTT, Jitter, Packet Loss, Quality Score over time) with min/max/avg summaries.
+
+### 🤖 Model
+Model metadata (algorithm, trees, lookback, horizon, training date, site count), Quality Score R² gauge, per-target accuracy table (MAE / RMSE / R²), feature importance bar chart, and a **Retrain** button that detects new CSVs and retrains on demand.
+
+---
+
+## ⚙️ How It Works
+
+```
+User enters site
+      │
+      ▼
+run_monitor.py (subprocess, non-interactive)
+      │  pings every second → appends rows to CSV
+      ▼
+data/network_data_<site>.csv
+      │
+      ├──► Predict page  → last 30 rows → model.predict() → Quality Score
+      ├──► History page  → all rows    → trend charts
+      └──► Dashboard     → avg metrics → site cards
+
+models/network_quality_model.joblib
+      │  loaded once at startup (st.cache_resource)
+      ├──► Predict page  → predictions
+      └──► Model page    → metadata + metrics
+```
+
+### ML Model
+- **Algorithm:** Random Forest (multi-output regressor)
+- **Targets:** Future RTT, Jitter, Packet Loss, Throughput, Quality Score
+- **Lookback:** 30 seconds of rolling features
+- **Horizon:** 15-second forecast
+- **Training:** `python train_network_quality_model.py --once`
+
+### Quality Score Colour Bands
+
+| Band      | Score  | Colour      |
+|-----------|--------|-------------|
+| Excellent | 85–100 | Green       |
+| Good      | 70–84  | Yellow-green|
+| Bad       | 45–69  | Orange      |
+| Poor      | 0–44   | Red         |
+
+---
+
+## 📈 Metrics
+
+| Metric | Unit | Good value |
+|--------|------|------------|
+| RTT (Round-Trip Time) | ms | < 50 ms |
+| Jitter | ms | < 10 ms |
+| Packet Loss | % | 0 % |
+| Throughput (estimated) | Kbps | higher = better |
+
+---
+
+## 🖥️ CLI Usage (without dashboard)
+
+**Monitor a site directly:**
 ```bash
-python train_network_quality_model.py
+python run_monitor.py google.com data/network_data_google_com.csv
 ```
 
-If you only want one training pass, use:
-
+**Train the model:**
 ```bash
 python train_network_quality_model.py --once
 ```
 
-The model is still a single shared model, but it now learns a website identifier feature from the CSV filename so Google, Bing, Amazon, and others can produce different forecasts.
-
-Predict the next 10-15 seconds in real time while a CSV is being updated:
-
+**Real-time prediction from CSV:**
 ```bash
 python predict_network_quality_realtime.py --csv data/network_data_google_com.csv
 ```
 
-`--auto-reload` reloads the saved model if the model file changes. It does not switch the CSV file, so pass the CSV for the website you want to forecast.
+---
 
-The predictor needs a warm-up window first. Once it has about 20-30 seconds of recent rows, it can forecast the next 10-15 seconds for websites you have not pinged before, using the shared model trained on all available data.
-
-### Input Required
-When you run the script, you'll be prompted to enter a website name:
+## 🗂️ Project Structure
 
 ```
-============================================================
-  🌐 NETWORK QUALITY MONITOR
-============================================================
-
-📍 Enter website name or IP address (e.g., google.com): google.com
-
-✓ Target set to: google.com
-✓ Data will be saved to: data/network_data_google_com.csv
-
-▶ Start monitoring? (y/n): y
+CN-project/
+├── app.py                          # Dashboard home page
+├── pages/
+│   ├── 1_Predict.py                # Live monitoring + prediction
+│   ├── 2_History.py                # Per-site historical trends
+│   └── 3_Model.py                  # Model info + retraining
+├── utils.py                        # Shared helpers (CSV loading, colour bands)
+├── run_monitor.py                  # Non-interactive monitor wrapper
+├── network_monitor.py              # Core monitoring backend
+├── network_quality_ml.py           # ML utilities (features, scoring, loading)
+├── train_network_quality_model.py  # Model training script
+├── predict_network_quality_realtime.py
+├── data/                           # Per-site CSVs (network_data_*.csv)
+├── models/                         # Trained model (network_quality_model.joblib)
+├── .streamlit/config.toml          # Dark theme
+├── requirements.txt
+└── tests/
+    └── test_utils.py               # 12 unit tests
 ```
 
-**Examples of valid inputs:**
-- `google.com`
-- `github.com`
-- `8.8.8.8`
-- `youtube.com`
-- `amazon.com`
-- `facebook.com`
-- `twitter.com`
+---
 
-**Note:** The script automatically handles URLs - you can enter just the domain name without `http://` or `https://`
-
-The script will:
-1. Accept your website input
-2. Automatically sanitize the website name
-3. Create a unique CSV file named `data/network_data_<website>.csv` (e.g., `data/network_data_google_com.csv`)
-4. Start monitoring and display real-time metrics every second
-5. Save all data to the CSV file for later analysis
-
-### Stop Monitoring
-Press `Ctrl+C` to stop and see summary statistics
-
-```
-⏹  Monitoring stopped by user
-
-============================================================
-📊 MONITORING SUMMARY
-============================================================
-Total Pings:        245
-Failed Pings:       2
-Success Rate:       99.18%
-Data saved to:      data/network_data_google_com.csv
-============================================================
-```
-
-### Quick Test (Optional)
-Want to test without interactive input? Run the test script:
+## 🧪 Tests
 
 ```bash
-python test_website_monitor.py
+.venv\Scripts\pytest tests/ -v
 ```
 
-This will monitor `google.com` for 10 seconds and save results to `data/test_google_com.csv`.
-
----
-
-## 📊 Output Format
-
-### Console Display
-Real-time metrics displayed every second:
-```
-============================================================
-  2026-03-09 21:50:35
-------------------------------------------------------------
- RTT:            32.00 ms
- Jitter:         5.00 ms
- Packet Loss:    0.00 %
- Throughput:     8.00 Kbps
-------------------------------------------------------------
- Moving Avg RTT:    34.50 ms
- Moving Avg Jitter: 3.20 ms
- Moving Avg Loss:   0.00 %
-------------------------------------------------------------
- Normalized RTT:    0.160
- Normalized Jitter: 0.050
- Normalized Loss:   0.000
- Normalized Throughput:   0.001
-============================================================
-```
-
-### CSV File (`network_data_<website>.csv`)
-All data is saved to a CSV file with the following columns:
-
-| Timestamp | RTT (ms) | Jitter (ms) | Packet Loss (%) | Throughput (Kbps) |
-|-----------|----------|-------------|-----------------|-------------------|
-| 2026-03-09 21:50:35 | 32.0 | 0.0 | 0.0 | 8.0 |
-| 2026-03-09 21:50:37 | 37.0 | 5.0 | 0.0 | 6.92 |
-| 2026-03-09 21:50:38 | 25.0 | 12.0 | 0.0 | 10.24 |
-
-Additional columns include:
-- Moving Avg RTT, Moving Avg Jitter, Moving Avg Loss
-- Normalized RTT, Normalized Jitter, Normalized Loss, Normalized Throughput
-
-**Each website gets its own CSV file:**
-- `data/network_data_google_com.csv`
-- `data/network_data_github_com.csv`
-- `data/network_data_youtube_com.csv`
-- etc.
-
----
-
-## 📊 Understanding the Metrics
-
-### 📡 RTT (Round-Trip Time)
-- **What it is**: Time taken for a packet to travel from your computer to the website and back
-- **Unit**: Milliseconds (ms)
-- **Good values**: < 50ms (excellent), 50-100ms (good), > 200ms (poor)
-- **Impact**: Lower RTT = faster response times and better user experience
-
-### 📊 Jitter
-- **What it is**: Variation in delay between consecutive packets
-- **Unit**: Milliseconds (ms)
-- **Good values**: < 10ms (excellent), 10-30ms (acceptable), > 50ms (problematic)
-- **Impact**: High jitter = unstable connection, important for video calls and gaming
-
-### ❌ Packet Loss
-- **What it is**: Percentage of packets that don't reach their destination
-- **Unit**: Percentage (%)
-- **Good values**: 0% (perfect), < 1% (acceptable), > 5% (poor)
-- **Impact**: Causes stuttering in video/audio and slower data transfers
-
-### ⚡ Throughput
-- **What it is**: Estimated data transfer rate based on RTT
-- **Unit**: Kilobits per second (Kbps)
-- **Note**: This is an estimation based on ping packet size
-- **Impact**: Higher throughput = faster downloads/uploads
-
----
-
-## 📈 Advanced Features
-
-### Moving Averages
-The script calculates rolling averages of the last 20 measurements to:
-- Smooth out temporary spikes or drops
-- Show real trends in network quality
-- Reduce noise from single anomalous readings
-
-### Normalized Values
-All metrics are normalized to a 0-1 scale:
-- Makes different metrics comparable
-- Useful for machine learning models
-- 0 = best performance, 1 = worst performance (for RTT, jitter, loss)
-
----
-
-## ⚙️ Configuration
-
-### Interactive Mode (Default)
-The script will prompt you to enter a website when you run it. This is the recommended way to use the tool.
-
-### Manual Configuration (Advanced)
-If you want to hardcode a target, you can modify the `__main__` section in `network_monitor.py`:
-
-```python
-if __name__ == "__main__":
-    monitor = NetworkMonitor(
-        target="your-website.com",     # Change to your desired target
-        window_size=20,                 # Change moving average window size
-        csv_filename="custom_name.csv"  # Change output filename
-    )
-    monitor.run()
-```
-
-### Key Parameters:
-- **target**: Website name (e.g., "google.com") or IP address (e.g., "8.8.8.8")
-- **window_size**: Number of recent samples for moving average calculation (default: 20)
-- **csv_filename**: Name of the output CSV file
-
----
-
-## 💡 Practical Use Cases
-
-### 1. Compare Website Performance
-Monitor multiple websites to compare their network performance:
-
-```bash
-# Run 1: Monitor Google
-python network_monitor.py
-# Enter: google.com
-
-# Run 2: Monitor GitHub
-python network_monitor.py
-# Enter: github.com
-
-# Run 3: Monitor YouTube
-python network_monitor.py
-# Enter: youtube.com
-```
-
-Then compare the CSV files to see which service has better response times.
-
-### 2. Troubleshoot Slow Website
-If a specific website is slow, monitor it to identify the issue:
-
-```bash
-python network_monitor.py
-# Enter: slow-website.com
-```
-
-Watch for:
-- **High RTT**: Website server is far away or slow
-- **High Jitter**: Unstable connection
-- **Packet Loss**: Network reliability issues
-
-### 3. Monitor Your ISP Quality
-Test your internet connection quality using a reliable target:
-
-```bash
-python network_monitor.py
-# Enter: 8.8.8.8  (Google DNS)
-```
-
-Run during different times of day to identify:
-- Peak congestion hours
-- Connection stability patterns
-- Average performance baseline
-
-### 4. Gaming/Streaming Analysis
-Check if your connection is suitable for real-time applications:
-
-```bash
-python network_monitor.py
-# Enter: twitch.tv  (or your gaming server)
-```
-
-For gaming/streaming you want:
-- RTT < 50ms
-- Jitter < 10ms
-- Packet Loss = 0%
-
----
-
-## 🎯 Next Steps (Not Implemented Yet)
-
-- Machine learning model for quality prediction
-- Graphical visualization
-- Real-time alerts
-- Quality classification (Good/Congested/Poor)
-- Trend forecasting
-
----
-
-## 📝 Notes
-
-- Script requires internet connection
-- Uses ICMP ping (may require admin privileges on some networks)
-- Data collection is continuous until manually stopped
-- Each website gets its own CSV file for easy comparison
+Expected: 12 passed.
